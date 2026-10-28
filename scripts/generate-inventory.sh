@@ -51,6 +51,34 @@ if [[ "${out_dir}" != "${REPO_ROOT}/infra/ansible" ]]; then
   ln -sfn "${REPO_ROOT}/infra/ansible/group_vars" "${out_dir}/group_vars"
 fi
 
+# Linode reuses public IPs: a rebuilt machine can inherit a destroyed one's
+# address while the lab's known_hosts still pins the old key, and SSH then
+# refuses with "REMOTE HOST IDENTIFICATION HAS CHANGED". Pins are therefore tied
+# to the INSTANCE ID. The pin for an address is kept while the same instance owns
+# it (so a swapped host is still caught) and forgotten only when the instance
+# behind that address changed, or was never recorded.
+PIN_RECORD="${LAB_DIR}/known_host_instances"
+forget_pin_if_instance_changed() { # IP INSTANCE_ID
+  local ip="$1" id="$2" recorded="" tmp
+  [[ -n "${id}" ]] || return 0
+  if [[ -f "${PIN_RECORD}" ]]; then
+    recorded="$(awk -v ip="${ip}" '$1 == ip {print $2}' "${PIN_RECORD}" | tail -1)"
+  fi
+  [[ "${recorded}" != "${id}" ]] || return 0
+  if [[ -f "${KNOWN_HOSTS}" ]] && ssh-keygen -F "${ip}" -f "${KNOWN_HOSTS}" >/dev/null 2>&1; then
+    ssh-keygen -R "${ip}" -f "${KNOWN_HOSTS}" >/dev/null 2>&1
+    echo "forgot the old SSH host key pinned for ${ip} (instance ${recorded:-unrecorded} -> ${id}; Linode reuses addresses)"
+  fi
+  tmp="$(mktemp)"
+  { [[ -f "${PIN_RECORD}" ]] && grep -v "^${ip} " "${PIN_RECORD}" || true; echo "${ip} ${id}"; } >"${tmp}"
+  mv "${tmp}" "${PIN_RECORD}"
+  chmod 600 "${PIN_RECORD}"
+}
+forget_pin_if_instance_changed "${server_ip}" "$(jq -r '.server_instance_id // empty' <<<"${base}")"
+if [[ -n "${gpu_ip}" ]]; then
+  forget_pin_if_instance_changed "${gpu_ip}" "$(jq -r '.gpu_instance_id // empty' <<<"${gpu}")"
+fi
+
 # Lab-only known_hosts. accept-new trusts a host on first connect only;
 # Linode does not expose host keys out of band, so first contact is TOFU.
 ssh_args="-o StrictHostKeyChecking=accept-new -o 'UserKnownHostsFile \"${KNOWN_HOSTS}\"'"
