@@ -141,6 +141,13 @@ Add publication links after release.
 
 This is a teaching environment, not a highly available production platform.
 
+## Contributing
+
+Contributions are welcome. The most useful ones right now are results from
+environments not yet in [tested environments](docs/tested-environments.md),
+fixes to the docs, and validation of the GPU path on real hardware. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the ground rules and how to test a change.
+
 ## License
 
 To be selected.
