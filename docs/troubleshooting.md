@@ -64,6 +64,20 @@ The messages are deliberate guards:
 - `sessionId must be lowercase letters/digits/dashes, max 24`.
 - `gpuType must be a GPU plan`: use a `g1-gpu-*` or `g2-gpu-*` slug.
 
+### `pulumi up` fails within seconds, before creating anything (observed)
+`pulumi preview` passes even with **no token or a fake one**, so a bad token only
+shows up as a failure at the first real API call (the VPC). Linode logs no event
+for it. Likely causes: the token is not exported in **this** shell (each terminal
+starts without it), it still contains the docs' `...` placeholder, it expired, or
+it lacks read/write for **VPCs** or **Firewalls** (a Linodes-only token can read
+VPCs but gets 401 creating one). Check before `up`:
+```bash
+./scripts/check-linode-token.sh      # run from the repo root; creates nothing
+```
+It probes each create with an invalid body (400 means allowed, 401 means missing
+scope). The Pulumi programs also stop early with `LINODE_TOKEN is not set`. A
+failed `up` like this leaves the stack with no Linode resources, so just rerun.
+
 ### "LINODE_TOKEN is not set" or an authentication error (observed)
 Export the token for that command only; do not write it to a file. Each shell
 starts fresh, so exporting in another terminal does not help.
@@ -90,14 +104,27 @@ Older Pulumi CLIs lack it. Use `pulumi destroy --preview-only --stack <stack>`.
 Seen when output goes to a non-blocking handle (for example some IDE terminals or
 tool shells). Pipe the output: `ansible-playbook ... 2>&1 | cat`.
 
-### SSH says the host key changed (expected)
-A rebuilt server can reuse an IP with a new host key. The lab keeps its own file,
-so remove only the stale line:
+### `REMOTE HOST IDENTIFICATION HAS CHANGED` during the bootstrap (observed twice)
+Linode **reuses public IPs**: a rebuilt machine can inherit a destroyed one's
+address while `.lab/known_hosts` still pins the old key, and the playbook's SSH wait
+fails with "Host key verification failed". It looks like a man-in-the-middle warning
+but, in both cases seen so far, it was IP reuse. Before removing anything, confirm
+the address now belongs to your new server:
+```bash
+cd infra/pulumi/base && pulumi stack output server_ip server_instance_id --stack lab
+```
+and that the same `server_ip` and instance id appear in the Linode Cloud Manager. Then
+drop only the stale pin (the lab keeps its own file, not `~/.ssh/known_hosts`):
 ```bash
 ssh-keygen -R <server-ip> -f .lab/known_hosts
 ```
-First contact is trust-on-first-use; the bootstrap prints the fingerprint read
-from the server so you can compare it.
+`scripts/generate-inventory.sh` now does this for you: it records which **instance
+id** owns each pinned address and forgets a pin only when that id changes (or was never
+recorded), so a pin for an unchanged server is kept and a swapped host is still caught.
+Regenerate the inventory (`BASE_STACK=lab ./scripts/generate-inventory.sh`) before
+the bootstrap. First contact is trust-on-first-use; the bootstrap prints the
+fingerprint read from the server so you can compare it. (A "Non UTF-8 encoded data"
+warning next to this error is just the emoji in the repo path and is harmless.)
 
 ### `k3s_version must be an exact v1.36.x+k3sN release` (observed)
 The guard rejects channels like `stable` or `latest` and any non-1.36 version.

@@ -41,6 +41,8 @@ Pulumi never SSHes to anything. Ansible connects over SSH.
 - Firewalls accept SSH and the API only from `adminCidr` (`0.0.0.0/0` is
   rejected). Node-to-node traffic is admitted by **VPC subnet**, so a node added
   later needs no change to the base firewall.
+- Linode reuses public IPs, so `generate-inventory.sh` ties each pinned host key to
+  the instance id and forgets the pin only when that id changes.
 - Access is key-only; no root password. First SSH contact is trust-on-first-use
   into `.lab/known_hosts` (Linode does not expose host keys out of band).
 
@@ -50,6 +52,7 @@ Billing starts at `pulumi up` (a `g6-standard-4` server is about $0.07/hr).
 
 ```bash
 export LINODE_TOKEN=...
+./scripts/check-linode-token.sh   # run from the repo root; creates nothing
 cd infra/pulumi/base
 python3 -m venv venv && venv/bin/pip install -r requirements.txt
 pulumi stack init lab

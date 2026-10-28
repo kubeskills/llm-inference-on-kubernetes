@@ -22,7 +22,8 @@ KUBE_CONTEXT=<ctx> kubectl --context <ctx> apply -k manifests/overlays/cpu
 KUBE_CONTEXT=<ctx> ./scripts/smoke-test.sh  # the closest thing to a test; rollout + /api/tags + bounded inference
 
 # Pulumi (two projects; ALWAYS pass --stack, never rely on the selected stack)
-pulumi preview --stack lab                  # in infra/pulumi/base
+./scripts/check-linode-token.sh              # pre-flight: token set, valid, can create instance/VPC/firewall (creates nothing)
+pulumi preview --stack lab                  # in infra/pulumi/base; passes even with NO token, so it proves nothing about auth
 ./scripts/gpu-session.sh plan --plan g2-gpu-rtx4000a1-s --hours 1   # read-only cost estimate
 ```
 
@@ -62,6 +63,7 @@ Commit directly to `main` in this repo (no feature branches). Conventional commi
 - `pulumi-linode` 6.x: `Instance.ip_address` is deprecated with no replacement output (warning only). `interface_generation="legacy_config"` is set because the account default may be the newer interfaces generation.
 - Scripts must run under macOS bash 3.2: an empty array expanded under `set -u` fails (`${arr[@]+"${arr[@]}"}`), and `set -e` is ignored inside functions called from `||`, which is why `gpu-session.sh` uses an ERR trap. The Bash tool's default shell is zsh (no word splitting of unquoted variables).
 - Ansible in this tool environment needs output piped (`| cat`) to avoid a blocking-IO error; set `ANSIBLE_PYTHON_INTERPRETER=/usr/bin/python3.12` for the lab host.
+- **Linode reuses public IPs**, so `.lab/known_hosts` pins go stale on every rebuild (`REMOTE HOST IDENTIFICATION HAS CHANGED`; seen twice). `generate-inventory.sh` tracks the instance id per address in `.lab/known_host_instances` and forgets a pin only when the id changes. Never disable host-key checking to work around it.
 - This repo's path contains a space and an emoji; always quote paths. The generated inventory passes the known_hosts path via a JSON-quoted `ansible_ssh_common_args`.
 - The `kubectl` on the operator's machine is 1.34; against the 1.36 server it works but warns about version skew (`check-prerequisites.sh` warns too).
 - Not validated for real yet: an unattended `up` from start to finish (the first real run needed two fixes and a manual resume), and a real reaper deletion on Linode. Stub-based tests replace the real playbook run, which is how two real bugs (group_vars not found for a session inventory outside `infra/ansible`; the K3s agent installer needing `K3S_TOKEN_FILE`) slipped through.

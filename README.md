@@ -35,8 +35,12 @@ See [the architecture guide](docs/architecture.md).
 
 ### What you need
 
-- A **Linode account** and an API token for it. New accounts may need a deposit
-  before GPU instances are allowed. The lab runs in `us-ord` only.
+- A **Linode account** and a personal access token for it with **read/write**
+  for **Linodes, VPCs and Firewalls** (and read-only for **Account**, which only
+  the GPU `verify` step uses). A token missing one of these makes `pulumi up` fail
+  at the first resource; step 1 checks it before anything is created. New
+  accounts may need a deposit before GPU instances are allowed. The lab runs in
+  `us-ord` only.
 - A **Pulumi account** and the Pulumi CLI. The examples keep stack state in
   Pulumi Cloud.
 - On your machine: **Python 3**, **Ansible**, **kubectl** (within one minor
@@ -58,6 +62,7 @@ Details and safety notes are in [infra/README.md](infra/README.md).
 
 ```bash
 export LINODE_TOKEN=...                 # your Linode token, for this shell only
+./scripts/check-linode-token.sh         # creates nothing; confirms the token can create what step 1 needs
 cd infra/pulumi/base
 python3 -m venv venv && venv/bin/pip install -r requirements.txt
 pulumi stack init lab

@@ -57,6 +57,7 @@ For each environment, record whether these succeeded:
 | 2026-10-28 | Found and fixed: flannel VXLAN bound to public eth0 instead of the VPC; fixed with `flannel-iface`, re-verified `flannel.1 local 10.0.0.10 dev eth1` | fixed |
 | 2026-10-28 | Second base build on a real server (`pulumi up`, bootstrap, `validate.yml`): hostname `llm-lab-server` and K3s node name `llm-lab-server` (no more `localhost`), `/etc/hosts` entry, cloud-init `preserve_hostname`, managed prompt block, flannel on the VPC `eth1` from first boot | pass |
 | 2026-10-28 | Reaper deployed to the real server via `playbooks/reaper.yml`: dry run proves token/API access, `systemd-analyze verify` clean, token file 0600 root-only and absent from units/journal, timer enabled, hardened service ran in execute mode (0 candidates, `Result=success`); `gpu-session.sh up`'s precondition (`is-active llm-gpu-reaper.timer`) passes | pass (no real deletion exercised) |
+| 2026-10-28 | Third base build: the new server was handed the address of the destroyed GPU worker, so the bootstrap failed with a changed-host-key error. Confirmed IP reuse against Linode and Pulumi, dropped the stale pin, bootstrap and `validate.yml` then passed. `generate-inventory.sh` now ties pins to instance ids (tested with stand-in keys and on the live lab) | fixed |
 
 ## Baseline and what is still NOT validated
 
