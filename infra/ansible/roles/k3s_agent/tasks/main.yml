@@ -13,7 +13,20 @@
   delegate_to: "{{ groups['k3s_server'][0] }}"
   no_log: true
 
-- name: Write K3s agent config (contains the join token)
+# The install script refuses to install an agent unless K3S_TOKEN or
+# K3S_TOKEN_FILE is set, and ignores config.yaml for that check. A root-only
+# token file serves both: K3S_TOKEN_FILE for the script, `token-file` in config.
+- name: Write the join token file (root-only)
+  ansible.builtin.copy:
+    content: "{{ k3s_agent_token_file.content | b64decode | trim }}\n"
+    dest: /etc/rancher/k3s/agent-token
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart k3s-agent
+
+- name: Write K3s agent config
   ansible.builtin.template:
     src: config.yaml.j2
     dest: /etc/rancher/k3s/config.yaml
@@ -39,6 +52,7 @@
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_version }}"
     K3S_URL: "{{ k3s_server_url }}"
+    K3S_TOKEN_FILE: /etc/rancher/k3s/agent-token
   when: k3s_version not in k3s_agent_installed.stdout
   changed_when: true
 

@@ -43,6 +43,14 @@ fi
 mkdir -p "${LAB_DIR}" "$(dirname "${OUT}")"
 chmod 700 "${LAB_DIR}"
 
+# Ansible loads group_vars from next to the inventory file. A session inventory
+# lives outside infra/ansible, so link the shared group_vars next to it;
+# without this every variable (k3s_version, lab_hostname, ...) is undefined.
+out_dir="$(cd "$(dirname "${OUT}")" && pwd)"
+if [[ "${out_dir}" != "${REPO_ROOT}/infra/ansible" ]]; then
+  ln -sfn "${REPO_ROOT}/infra/ansible/group_vars" "${out_dir}/group_vars"
+fi
+
 # Lab-only known_hosts. accept-new trusts a host on first connect only;
 # Linode does not expose host keys out of band, so first contact is TOFU.
 ssh_args="-o StrictHostKeyChecking=accept-new -o 'UserKnownHostsFile \"${KNOWN_HOSTS}\"'"
