@@ -173,17 +173,23 @@ and `systemctl --failed`; nothing alerts you.
 
 ## Status and unverified risks
 
-Tested with stubs and a fake Linode API (no real cloud calls): approval gating,
-failure reporting, teardown order, verification (including a destroy that fails
-to delete), the reaper's selection rules, `pulumi preview` for both projects, and
-Ansible lint/syntax. **None of this has run against real Linode hardware.**
+Tested with stubs and a fake Linode API: approval gating, failure reporting,
+teardown order, verification (including a destroy that fails to delete), the
+reaper's selection rules, and `pulumi preview` for both projects.
 
-- **Reaper units are not validated by systemd or on Linux.** The unit files were
-  only structure-checked, and the script has only run on macOS (a Docker/Ubuntu
-  check was blocked because Docker was not running). `date -d` fallback,
-  `DynamicUser` with a root-only `EnvironmentFile`, and `SystemCallFilter` are
-  unverified at runtime. The `linodes:read_write` scope being sufficient is
-  also unverified (no real token).
+**Run for real (see [tested-environments.md](../docs/tested-environments.md)):**
+the base stack, the K3s bootstrap and validation, the hostname/prompt settings,
+and the reaper install. **Never run against real hardware: any GPU session**
+(provisioning a GPU node, the NVIDIA driver/toolkit/device plugin, cross-node
+traffic, inference on a GPU, and teardown with `verify`).
+
+- **Reaper: verified on a real server (2026-10-28).** The unit files pass
+  `systemd-analyze verify`; the hardened service (dynamic user, root-only
+  `EnvironmentFile`, syscall filter) ran successfully under the timer in execute
+  mode and found 0 candidates; the token file is 0600 root-only and absent from
+  unit files and logs; the GNU `date` fallback works. Not yet verified: an actual
+  **deletion** of an expired instance on Linode (only tested against a fake API),
+  and that `linodes:read_write` is the minimum scope.
 - **VPC networking inside the guest: verified on the base server (2026-10-28).**
   Ubuntu configures the VPC interface automatically (`eth1` = `10.0.0.10/24`,
   on-link, default route stays on the public `eth0`). **K3s does NOT bind
@@ -197,10 +203,13 @@ Ansible lint/syntax. **None of this has run against real Linode hardware.**
   the hostname (like `hostnamectl set-hostname`) before K3s is installed:
   `llm-lab-server` for the server and `llm-<inventory name>` (e.g. `llm-gpu-0`)
   for agents, and K3s `node-name` is set to the same value so nodes cannot
-  collide. The role also adds a `127.0.1.1` entry to `/etc/hosts` and tells
-  cloud-init to preserve the hostname; both are unverified on a real host
-  (cloud-init's reboot behaviour in particular). Changing the hostname of an
-  already-bootstrapped server would rename its K3s node; rebuild instead.
+  collide. The role also adds a `127.0.1.1` entry to `/etc/hosts` (no `sudo`
+  resolution warning) and tells cloud-init to preserve the hostname. Verified on
+  a real server: the hostname, K3s node name, `/etc/hosts` entry and the
+  cloud-init file are all in place after bootstrap. Not yet verified: that the
+  name survives a **reboot** (the GPU role reboots the GPU node). Changing the
+  hostname of an already-bootstrapped server would rename its K3s node; rebuild
+  instead.
 - `interface_generation="legacy_config"` is set explicitly because the account
   default may be the new Linode Interfaces generation.
 - The server runs the distro kernel (`6.8.0-134-generic`) with matching headers

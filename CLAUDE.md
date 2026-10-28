@@ -64,4 +64,4 @@ Commit directly to `main` in this repo (no feature branches). Conventional commi
 - Ansible in this tool environment needs output piped (`| cat`) to avoid a blocking-IO error; set `ANSIBLE_PYTHON_INTERPRETER=/usr/bin/python3.12` for the lab host.
 - This repo's path contains a space and an emoji; always quote paths. The generated inventory passes the known_hosts path via a JSON-quoted `ansible_ssh_common_args`.
 - The `kubectl` on the operator's machine is 1.34; against the 1.36 server it works but warns about version skew (`check-prerequisites.sh` warns too).
-- Not validated anywhere yet: systemd units for the reaper on Linux, the NVIDIA driver/toolkit/device-plugin path, cross-node networking with a real second node.
+- Not validated anywhere yet: a real reaper deletion on Linode (the timer and units are verified), the NVIDIA driver/toolkit/device-plugin path, cross-node networking with a real second node.

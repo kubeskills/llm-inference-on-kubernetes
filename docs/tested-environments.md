@@ -52,6 +52,8 @@ For each environment, record whether these succeeded:
 | 2026-10-28 | Base server inspected over SSH: VPC `eth1` auto-configured, distro kernel + headers present, key-only SSH | pass (read-only) |
 | 2026-10-28 | Base bootstrap on the real server: K3s v1.36.5+k3s1 installed, `validate.yml` passes, lab kubeconfig works through the firewall (kubectl 1.34 vs server 1.36, skew warning only) | pass |
 | 2026-10-28 | Found and fixed: flannel VXLAN bound to public eth0 instead of the VPC; fixed with `flannel-iface`, re-verified `flannel.1 local 10.0.0.10 dev eth1` | fixed |
+| 2026-10-28 | Second base build on a real server (`pulumi up`, bootstrap, `validate.yml`): hostname `llm-lab-server` and K3s node name `llm-lab-server` (no more `localhost`), `/etc/hosts` entry, cloud-init `preserve_hostname`, managed prompt block, flannel on the VPC `eth1` from first boot | pass |
+| 2026-10-28 | Reaper deployed to the real server via `playbooks/reaper.yml`: dry run proves token/API access, `systemd-analyze verify` clean, token file 0600 root-only and absent from units/journal, timer enabled, hardened service ran in execute mode (0 candidates, `Result=success`); `gpu-session.sh up`'s precondition (`is-active llm-gpu-reaper.timer`) passes | pass (no real deletion exercised) |
 
 ## Baseline and what is NOT yet validated
 
