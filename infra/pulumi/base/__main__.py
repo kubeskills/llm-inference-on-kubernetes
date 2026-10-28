@@ -6,6 +6,7 @@ Pulumi only creates cloud resources; Ansible installs K3s over SSH.
 """
 
 import ipaddress
+import os
 
 import pulumi
 import pulumi_linode as linode
@@ -13,6 +14,14 @@ import pulumi_linode as linode
 # The lab is scoped to us-ord: it is the region with the GPU plans this
 # environment targets.
 LAB_REGION = "us-ord"
+
+# `pulumi preview` succeeds even with no or a fake token, so a missing token only
+# shows up as a failure at the first real API call during `pulumi up`. Fail early.
+if not os.environ.get("LINODE_TOKEN") and not pulumi.Config("linode").get("token"):
+    raise ValueError(
+        "LINODE_TOKEN is not set in this shell. Export a Linode API token, then "
+        "check it with ./scripts/check-linode-token.sh"
+    )
 
 cfg = pulumi.Config()
 region = cfg.get("region") or LAB_REGION

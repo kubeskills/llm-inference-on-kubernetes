@@ -10,12 +10,21 @@ independent reaper (scripts/gpu-reaper.sh).
 """
 
 import ipaddress
+import os
 import re
 
 import pulumi
 import pulumi_linode as linode
 
 LAB_REGION = "us-ord"
+
+# `pulumi preview` succeeds even with no or a fake token, so a missing token only
+# shows up as a failure at the first real API call during `pulumi up`. Fail early.
+if not os.environ.get("LINODE_TOKEN") and not pulumi.Config("linode").get("token"):
+    raise ValueError(
+        "LINODE_TOKEN is not set in this shell. Export a Linode API token, then "
+        "check it with ./scripts/check-linode-token.sh"
+    )
 
 cfg = pulumi.Config()
 base_stack = cfg.require("baseStack")

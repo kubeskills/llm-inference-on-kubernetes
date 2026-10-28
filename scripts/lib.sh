@@ -64,6 +64,16 @@ api_code() {
       -X "$1" "${LINODE_API}$2"
 }
 
+# api_post_code PATH JSON  -> prints only the HTTP status code of a POST.
+# Used to probe write authorization with a deliberately INVALID body: an
+# authorized caller gets 400 (validation), a bad or under-scoped token gets 401.
+api_post_code() {
+  [[ -n "${LINODE_TOKEN:-}" ]] || die "LINODE_TOKEN is not set"
+  printf 'header = "Authorization: Bearer %s"\n' "${LINODE_TOKEN}" |
+    curl -K - -sS -o /dev/null -w '%{http_code}' --max-time 30 \
+      -X POST -H 'Content-Type: application/json' -d "$2" "${LINODE_API}$1"
+}
+
 # api_get PATH  -> prints the JSON body; non-zero on a non-2xx response
 api_get() {
   [[ -n "${LINODE_TOKEN:-}" ]] || die "LINODE_TOKEN is not set"
