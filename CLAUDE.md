@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-A teaching repo (article + video + code): deploy a small LLM on Kubernetes, either onto **any existing cluster** (the default path; `infra/` is optional) or onto a disposable Linode K3s lab with an on-demand GPU worker. Baseline is Kubernetes 1.36 via K3s. Much of the GPU path is built but **not yet validated on GPU hardware**; keep docs honest about that (`docs/tested-environments.md` is the record of what has actually run).
+A teaching repo (article + video + code): deploy a small LLM on Kubernetes, either onto **any existing cluster** (the default path; `infra/` is optional) or onto a disposable Linode K3s lab with an on-demand GPU worker. Baseline is Kubernetes 1.36 via K3s. The GPU path passed all 11 checks on one real session (2026-10-28), and teardown (`down` + `verify`) passed on that session, but an unattended `up` and a real reaper deletion have **not** run for real yet; keep docs honest about that (`docs/tested-environments.md` is the record of what has actually run).
 
 ## Commands
 
@@ -64,4 +64,4 @@ Commit directly to `main` in this repo (no feature branches). Conventional commi
 - Ansible in this tool environment needs output piped (`| cat`) to avoid a blocking-IO error; set `ANSIBLE_PYTHON_INTERPRETER=/usr/bin/python3.12` for the lab host.
 - This repo's path contains a space and an emoji; always quote paths. The generated inventory passes the known_hosts path via a JSON-quoted `ansible_ssh_common_args`.
 - The `kubectl` on the operator's machine is 1.34; against the 1.36 server it works but warns about version skew (`check-prerequisites.sh` warns too).
-- Not validated anywhere yet: a real reaper deletion on Linode (the timer and units are verified), the NVIDIA driver/toolkit/device-plugin path, cross-node networking with a real second node.
+- Not validated for real yet: an unattended `up` from start to finish (the first real run needed two fixes and a manual resume), and a real reaper deletion on Linode. Stub-based tests replace the real playbook run, which is how two real bugs (group_vars not found for a session inventory outside `infra/ansible`; the K3s agent installer needing `K3S_TOKEN_FILE`) slipped through.

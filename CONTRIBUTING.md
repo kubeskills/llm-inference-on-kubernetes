@@ -11,10 +11,11 @@ been tested matter more than feature count.
   [docs/tested-environments.md](docs/tested-environments.md) has been verified.
   A new row (cluster type and version, CPU or GPU path, date, result, notes) is a
   real contribution, including a failure.
-- **Validating the GPU path on real hardware.** It is built and statically
-  checked but has not run on a GPU yet.
-- **Docs.** `docs/troubleshooting.md` is still a stub; real failure modes you hit
-  are exactly what it needs.
+- **Validating the GPU path beyond the one session so far.** It has run once on
+  real hardware (one RTX 4000 Ada session in `us-ord`, all 11 checks passed).
+  Other GPUs, regions and clusters are untested.
+- **Docs.** Real failure modes you hit are exactly what
+  [docs/troubleshooting.md](docs/troubleshooting.md) needs.
 - **Other clusters and providers**, as long as the default path (an existing
   cluster, no `infra/`) keeps working.
 

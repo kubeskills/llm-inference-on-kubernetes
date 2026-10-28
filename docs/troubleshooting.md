@@ -131,10 +131,26 @@ renames the K3s node. Rebuild instead.
   `down --session <id>` for the old one.
 - `session <id> already exists`: pick a new id, or `down` the old record.
 
-### `up` fails partway (observed with test doubles)
+### Bootstrap fails with `'k3s_version' is undefined` (observed, fixed)
+Ansible loads `group_vars` from next to the inventory file. A session inventory
+lives in `.lab/sessions/<id>/`, outside `infra/ansible`, so none of the group
+variables were found. `generate-inventory.sh` now links `group_vars` next to it. If
+you see this on an older checkout, regenerate the session inventory:
+`BASE_STACK=lab ./scripts/generate-inventory.sh --session <id>`.
+
+### The K3s agent install fails with "Defaulted k3s exec command to 'agent' because K3S_URL is defined, but K3S_TOKEN or K3S_TOKEN_FILE is not defined" (observed, fixed)
+The install script checks only its **environment** for the token, not
+`config.yaml`. The agent role now writes the join token to a root-only file
+(`/etc/rancher/k3s/agent-token`) and sets `K3S_TOKEN_FILE` for the installer plus
+`token-file` in the config. Rerun the playbook; the earlier steps are idempotent.
+
+### `up` fails partway (observed on a real session)
 The failure report names the stage, lists the stack's resources and the instance
 id, and prints the exact cleanup command. **Billing continues until the instance
-is deleted.**
+is deleted.** The instance and firewall already exist at that point, so you can fix
+the cause and rerun the failed stage by hand (inventory, playbook, overlay,
+`validate-gpu.sh`) instead of tearing down and paying to start over; there is no
+`resume` command yet.
 ```bash
 ./scripts/gpu-session.sh status --session <id>
 ./scripts/gpu-session.sh down   --session <id>
@@ -149,6 +165,11 @@ It tells you which check failed:
 - `tag listing unavailable`: the Pulumi token needs `account:read_only` (and an
   unrestricted account) for the tag check. `verify` fails rather than assume.
 - stack still holds resources: `pulumi destroy --stack gpu-<id>` in `infra/pulumi/gpu`.
+
+### After `down`, pods still show as Running for a moment (observed)
+Deleting the Node leaves its pods listed until Kubernetes garbage-collects the
+orphans, which took under a minute. Nothing to do; recheck with
+`kubectl get pods -A -o wide`.
 
 ### The reaper deleted my instance, but Pulumi and Kubernetes still list it (expected)
 The reaper only deletes the cloud instance. Reconcile with
@@ -169,13 +190,13 @@ server deletes nothing: `/opt/llm-lab/scripts/gpu-reaper.sh`.
 New or low-spend accounts may need a deposit before deploying GPU Linodes; contact
 Linode support. Also confirm the plan is in stock in `us-ord`.
 
-### The GPU role fails to install the driver (expected, unvalidated)
+### The GPU role fails to install the driver (expected)
 The driver package builds a kernel module with DKMS and needs headers for the
 **running** kernel (present on the base image; not yet confirmed on the GPU
 node). Check `dkms status` and `journalctl` on the node, and that the node was
 rebooted after the driver install.
 
-### K3s did not pick up the NVIDIA runtime (expected, unvalidated)
+### K3s did not pick up the NVIDIA runtime (expected)
 K3s detects `nvidia-container-runtime` **when it starts**, so the GPU role must run
 before the agent. Check on the GPU node:
 ```bash
@@ -185,7 +206,7 @@ grep nvidia /var/lib/rancher/k3s/agent/etc/containerd/config.toml
 If missing, the toolkit was installed after the agent started; install it and
 `systemctl restart k3s-agent`.
 
-### The GPU pod stays Pending (expected, unvalidated)
+### The GPU pod stays Pending (expected)
 ```bash
 kubectl -n llm-inference-gpu describe pod -l app=llm-inference   # scheduling events
 kubectl get node -l nvidia.com/gpu.present=true                  # is the node labelled?

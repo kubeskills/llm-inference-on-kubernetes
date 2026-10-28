@@ -179,9 +179,12 @@ reaper's selection rules, and `pulumi preview` for both projects.
 
 **Run for real (see [tested-environments.md](../docs/tested-environments.md)):**
 the base stack, the K3s bootstrap and validation, the hostname/prompt settings,
-and the reaper install. **Never run against real hardware: any GPU session**
-(provisioning a GPU node, the NVIDIA driver/toolkit/device plugin, cross-node
-traffic, inference on a GPU, and teardown with `verify`).
+the reaper install, and (2026-10-28) a full GPU session: provisioning, the NVIDIA
+driver and toolkit, the device plugin, cross-node traffic, GPU inference, and all
+11 `validate-gpu.sh` checks. That first `up` failed twice after provisioning (two
+bugs, now fixed) and was resumed by hand. Teardown (`down` + `verify`) then ran
+for real and passed. **Not yet run for real:** an unattended `up` from start to
+finish, and a reaper deletion.
 
 - **Reaper: verified on a real server (2026-10-28).** The unit files pass
   `systemd-analyze verify`; the hardened service (dynamic user, root-only
@@ -197,8 +200,8 @@ traffic, inference on a GPU, and teardown with `verify`).
   the first real run VXLAN came up on the public `eth0`, which the firewall
   would have blocked. The configs now set `flannel-iface` (derived from the
   host's own VPC address), and the fixed server shows `flannel.1 local
-  10.0.0.10 dev eth1`. Still unverified: cross-node traffic with a real second
-  node, and that the GPU node gets the same interface behaviour.
+  10.0.0.10 dev eth1`. Verified on the GPU node too (`local 10.0.0.20 dev
+  eth1`), and by a client on the server node reaching a service on the GPU node.
 - **Host and node names.** The VMs boot as `localhost`. The `common` role sets
   the hostname (like `hostnamectl set-hostname`) before K3s is installed:
   `llm-lab-server` for the server and `llm-<inventory name>` (e.g. `llm-gpu-0`)
@@ -206,17 +209,16 @@ traffic, inference on a GPU, and teardown with `verify`).
   collide. The role also adds a `127.0.1.1` entry to `/etc/hosts` (no `sudo`
   resolution warning) and tells cloud-init to preserve the hostname. Verified on
   a real server: the hostname, K3s node name, `/etc/hosts` entry and the
-  cloud-init file are all in place after bootstrap. Not yet verified: that the
-  name survives a **reboot** (the GPU role reboots the GPU node). Changing the
+  cloud-init file are all in place after bootstrap, and the GPU node kept its
+  name across the driver reboot. Changing the
   hostname of an already-bootstrapped server would rename its K3s node; rebuild
   instead.
 - `interface_generation="legacy_config"` is set explicitly because the account
   default may be the new Linode Interfaces generation.
-- The server runs the distro kernel (`6.8.0-134-generic`) with matching headers
-  installed, so the DKMS driver build is plausible (still unproven on the GPU
-  node). `g2-gpu-rtx4000a1-s` was reported available in `us-ord` by Linode's
-  availability API on 2026-10-28; a deposit may still be required for GPU
-  instances.
+- The distro kernel (`6.8.0-134-generic`) with matching headers let the DKMS
+  driver build and load on the GPU node (`nvidia-headless-580-server` 580.178.04).
+  `g2-gpu-rtx4000a1-s` was in stock in `us-ord` and no deposit was requested on
+  this account; a newer account may still be asked for one.
 - One GPU worker at a time (fixed VPC address `10.0.0.20`).
 - The tag-listing check needs an `account:read_only` token on an unrestricted
   account; if unavailable, `verify` fails rather than assuming success.

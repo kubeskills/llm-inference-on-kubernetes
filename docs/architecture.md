@@ -8,8 +8,9 @@ This repo has two layers that you can use separately:
    **on-demand GPU worker**, for readers who have no cluster or want a GPU.
 
 What has actually run is recorded in [tested-environments.md](tested-environments.md).
-Statements below marked *(unvalidated)* are built and statically checked but
-have not run on real hardware.
+The GPU path passed all 11 validation checks on real hardware on 2026-10-28.
+Statements below marked *(unvalidated)* have not run for real yet: a real reaper
+deletion and an unattended `up` end to end.
 
 ## Overview
 
@@ -98,7 +99,7 @@ persistent base: no GPU instance is running unless an operator approved one.
 `manifests/base` is hardware-agnostic. The overlays differ only in what hardware
 requires:
 
-| | `overlays/cpu` | `overlays/gpu` *(unvalidated)* |
+| | `overlays/cpu` | `overlays/gpu` |
 |---|---|---|
 | Namespace | `llm-inference` | `llm-inference-gpu` |
 | Model (placeholder) | `qwen2.5:0.5b` | `llama3.2:3b` |
@@ -164,8 +165,8 @@ the instance disk and disappears with it.
   host's own VPC address). Without it K3s bound VXLAN to the public `eth0` even
   though `node-ip` was the VPC address, and the firewall would have dropped pod
   traffic. A single node cannot reveal this. Verified on the base server
-  (`flannel.1 local 10.0.0.10 dev eth1`); cross-node traffic with a second node
-  is *(unvalidated)*.
+  (`flannel.1 local 10.0.0.10 dev eth1`), and on the GPU node (`local 10.0.0.20
+  dev eth1`); a client on the server node reached a service on the GPU node.
 - Only the admin IP can reach SSH and the API. SSH is key-only; no root password.
 
 ### Bootstrap (Ansible)
@@ -209,12 +210,12 @@ Hostnames boot as `localhost`; the `common` role sets them (`llm-lab-server`,
   allocatable, device plugin running, the pod on the GPU node with one GPU
   allocated, `nvidia-smi` in the pod, an inference request, the model loaded on
   the GPU, a client on the *other* node reaching the Service, `kubectl top
-  nodes`, and dcgm-exporter metrics. *(All unvalidated on hardware.)*
+  nodes`, and dcgm-exporter metrics. *(All 11 passed on real hardware.)*
 - **Teardown deletes, it does not stop.** The namespace goes first, while the
   node is alive, so the volume is cleaned; then the stack is destroyed.
   `verify` then requires that the instance id returns 404, the session tag lists
   no billable objects, the stack holds no resources, and the base server still
-  exists.
+  exists. *(Run on a real session on 2026-10-28: all four checks passed.)*
 - **Everything is explicit.** Commands take `--session`, always pass
   `--stack gpu-<id>`, and cross-check the instance id between the session record
   (`.lab/sessions/<id>/`) and the stack before deleting anything.
@@ -232,7 +233,8 @@ It deletes an instance only if **all** hold: the `llm-gpu-session` and
 expiry. Anything else carrying the marker is reported and left alone. `up`
 refuses to provision unless the timer is active.
 
-Trade-off: the reaper token lives on a public host, and in a shared account it
+Trade-off: the reaper token lives on a public host (the timer and units are
+verified on a real server; a real deletion is not), and in a shared account it
 can reach any Linode in that account (see the decision recorded in
 [infra/README.md](../infra/README.md)). The tag and label guards protect against
 bugs, not against a compromised host.

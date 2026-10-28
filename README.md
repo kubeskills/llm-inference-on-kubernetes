@@ -5,7 +5,9 @@ and investigate its startup and runtime behavior.
 
 ## Status
 
-Work in progress. Commands and manifests are not yet validated.
+Work in progress. The CPU path is validated on kind and the GPU lab on real Linode
+hardware (see [tested environments](docs/tested-environments.md)); an unattended
+`up` and a real reaper deletion are still unproven.
 
 ## What you will learn
 
