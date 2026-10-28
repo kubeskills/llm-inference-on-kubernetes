@@ -1,0 +1,12 @@
+# Managed by Ansible.
+[Unit]
+Description=Run the GPU session reaper every {{ gpu_reaper_interval_minutes }} minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec={{ gpu_reaper_interval_minutes }}min
+AccuracySec=30s
+RandomizedDelaySec=30s
+
+[Install]
+WantedBy=timers.target

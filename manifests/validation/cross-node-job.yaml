@@ -1,0 +1,49 @@
+---
+# Cross-node networking check. validate-gpu.sh substitutes __NAME__,
+# __NAMESPACE__ and __NODE__ (a node WITHOUT the GPU) and applies this. The Job
+# calls the inference Service from a different node. It is garbage-collected
+# by the Job controller (ttlSecondsAfterFinished), never deleted by the script.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: __NAME__
+  labels:
+    app: xnode-test
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: xnode-test
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: "__NODE__"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: client
+          image: ollama/ollama:0.35.1
+          command: ["ollama", "list"]
+          env:
+            - name: HOME
+              value: /tmp
+            - name: OLLAMA_HOST
+              value: http://llm-inference.__NAMESPACE__.svc:80
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

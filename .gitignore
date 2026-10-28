@@ -1,0 +1,48 @@
+# Credentials and local configuration
+.env
+.env.*
+*.env
+!.env.example
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+secrets/
+*.pem
+*.key
+id_ed25519*
+id_rsa*
+*.tfstate
+*.tfstate.*
+.terraform/
+.vault-pass
+
+# Local outputs
+results/
+recordings/
+*.log
+
+# Editor and operating-system files
+.DS_Store
+.vscode/
+.idea/
+
+# Lab artifacts: kubeconfigs, known_hosts, GPU session records
+.lab/
+
+# Infra: generated inventory and Pulumi stack config (stack config can hold
+# an SSH public key and, if ever set with --secret, encrypted secrets)
+infra/ansible/inventory.yml
+infra/pulumi/*/Pulumi.*.yaml
+.pulumi/
+
+# Python tooling
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Ansible local cache
+.ansible/
+
+# Claude Code local state (CLAUDE.md is tracked on purpose)
+.claude/settings.local.json

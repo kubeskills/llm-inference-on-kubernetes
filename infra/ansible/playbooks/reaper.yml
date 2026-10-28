@@ -1,0 +1,8 @@
+---
+# Installs/rotates the on-server expiry enforcer. Run after bootstrap.yml:
+#   REAPER_LINODE_TOKEN=... ansible-playbook playbooks/reaper.yml
+# gpu-session.sh refuses to provision a GPU worker unless this timer is active.
+- name: Install the GPU reaper on the control plane
+  hosts: k3s_server
+  roles:
+    - gpu_reaper

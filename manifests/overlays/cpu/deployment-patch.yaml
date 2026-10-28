@@ -1,0 +1,18 @@
+---
+# CPU differences: no accelerator, CPU/memory sized for a small model.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-inference
+spec:
+  template:
+    spec:
+      containers:
+        - name: server
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+            limits:
+              cpu: "4"
+              memory: 8Gi

@@ -1,0 +1,55 @@
+---
+- name: Pre-flight
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Require an exact Kubernetes 1.36 K3s release (no channels)
+      ansible.builtin.assert:
+        that: k3s_version is match('^v1\\.36\\.[0-9]+\\+k3s[0-9]+$')
+        fail_msg: >-
+          k3s_version must be an exact v1.36.x+k3sN release, got
+          '{{ k3s_version }}'.
+
+- name: Wait for lab hosts
+  hosts: k3s_server
+  gather_facts: false
+  tasks:
+    - name: Wait for SSH to accept connections
+      ansible.builtin.wait_for_connection:
+        delay: 5
+        timeout: 300
+
+- name: Common setup
+  hosts: k3s_server
+  roles:
+    - common
+
+- name: K3s server
+  hosts: k3s_server
+  roles:
+    - k3s_server
+
+- name: Connection summary
+  hosts: k3s_server
+  gather_facts: false
+  tasks:
+    - name: Read the SSH host key fingerprint from the server
+      ansible.builtin.command: ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+      register: bootstrap_hostkey
+      changed_when: false
+
+    - name: Show how to reach the lab server
+      ansible.builtin.debug:
+        msg:
+          - "LAB SERVER PUBLIC IP: {{ ansible_host }}"
+          - "SSH:        ssh root@{{ ansible_host }}"
+          - >-
+            Host key:   {{ bootstrap_hostkey.stdout }}
+            (compare with the fingerprint SSH shows on first connect)
+          - "VPC IP:     {{ k3s_node_ip }}"
+          - >-
+            Kubernetes: kubectl --kubeconfig '{{ lab_kubeconfig }}' get nodes
+          - >-
+            API:        https://{{ ansible_host }}:6443
+            (the firewall allows only your admin IP)

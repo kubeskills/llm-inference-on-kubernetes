@@ -1,0 +1,14 @@
+---
+# Written for you by scripts/gpu-session.sh (one stack per session, named
+# gpu-<sessionId>). Shown here for reference; do not hand-edit a live session.
+config:
+  # Fully qualified base stack to READ outputs from (never modified):
+  #   <organization>/llm-inference-infra/<stack>  (any org on a DIY backend)
+  llm-inference-gpu:baseStack: organization/llm-inference-infra/lab
+  llm-inference-gpu:sessionId: 20261007t1430
+  # Unix epoch seconds when the session expires (policy; enforced by the reaper)
+  llm-inference-gpu:expiresEpoch: "1791385800"
+  llm-inference-gpu:gpuType: g2-gpu-rtx4000a1-s
+  llm-inference-gpu:adminCidr: 203.0.113.4/32
+  llm-inference-gpu:sshPublicKey: ssh-ed25519 AAAA... user@host
+  llm-inference-gpu:gpuVpcIp: 10.0.0.20

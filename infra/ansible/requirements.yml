@@ -1,0 +1,3 @@
+---
+# Only ansible.builtin modules are used; no collections are required.
+collections: []

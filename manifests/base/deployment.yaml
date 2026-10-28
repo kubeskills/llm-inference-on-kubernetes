@@ -1,0 +1,96 @@
+---
+# Shared workload definition. Hardware-specific settings (resources, model,
+# scheduling) live in the cpu/gpu overlays.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-inference
+  labels:
+    app: llm-inference
+spec:
+  replicas: 1
+  # RWO volume: the old pod must release the PVC before the new one starts.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: llm-inference
+  template:
+    metadata:
+      labels:
+        app: llm-inference
+    spec:
+      serviceAccountName: llm-inference
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: server
+          image: ollama/ollama:0.35.1
+          command: ["/bin/bash", "/scripts/entrypoint.sh"]
+          ports:
+            - name: http
+              containerPort: 11434
+          envFrom:
+            - configMapRef:
+                name: llm-config
+          env:
+            - name: HOME
+              value: /models
+            - name: OLLAMA_MODELS
+              value: /models
+            - name: OLLAMA_HOST
+              value: 0.0.0.0:11434
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          # Placeholder sizing; each overlay sets its own.
+          resources:
+            requests:
+              cpu: "1"
+              memory: 2Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          # Allows up to ~10 minutes for server start and model pull.
+          startupProbe:
+            httpGet:
+              path: /api/version
+              port: http
+            periodSeconds: 5
+            failureThreshold: 120
+          livenessProbe:
+            httpGet:
+              path: /api/version
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+          # Ready only once the configured model is in the cache.
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - ollama list | grep -q "^${MODEL_NAME}"
+            periodSeconds: 10
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: model-cache
+              mountPath: /models
+            - name: entrypoint
+              mountPath: /scripts
+              readOnly: true
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: model-cache
+        - name: entrypoint
+          configMap:
+            name: llm-entrypoint

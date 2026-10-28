@@ -1,0 +1,10 @@
+# Managed by Ansible.
+write-kubeconfig-mode: "0600"
+flannel-backend: {{ k3s_flannel_backend }}
+node-name: {{ lab_hostname }}
+node-ip: {{ k3s_node_ip }}
+flannel-iface: {{ k3s_flannel_iface }}
+tls-san:
+{% for san in k3s_tls_sans %}
+  - {{ san }}
+{% endfor %}

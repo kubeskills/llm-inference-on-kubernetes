@@ -1,0 +1,57 @@
+---
+# Equivalent to `sudo hostnamectl set-hostname <lab_hostname>`; the module is
+# idempotent, so a rerun reports no change.
+- name: Set the hostname
+  ansible.builtin.hostname:
+    name: "{{ lab_hostname }}"
+    use: systemd
+
+# hostnamectl does not touch /etc/hosts; without this entry sudo warns that it
+# cannot resolve the new name.
+- name: Map the hostname in /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1\s'
+    line: "127.0.1.1 {{ lab_hostname }}"
+    state: present
+
+# Green host label in the shell prompt. Same line as
+#   echo "PS1='\\[\\e[0;32m\\]LLM-LAB-SERVER \\[\\e[0m\\]\\w \\$ '" >> ~/.bashrc
+# but as a managed block, so reruns do not append duplicates.
+- name: Set the shell prompt
+  ansible.builtin.blockinfile:
+    path: ~/.bashrc
+    marker: "# {mark} ANSIBLE MANAGED PROMPT"
+    create: true
+    mode: "0644"
+    block: |
+      PS1='\[\e[0;32m\]{{ lab_prompt_label }} \[\e[0m\]\w \$ '
+
+# cloud-init can re-apply the metadata hostname on boot (the GPU role reboots).
+- name: Check for cloud-init
+  ansible.builtin.stat:
+    path: /etc/cloud/cloud.cfg.d
+  register: common_cloud_cfg
+
+- name: Keep the hostname across reboots
+  ansible.builtin.copy:
+    content: |
+      # Managed by Ansible.
+      preserve_hostname: true
+    dest: /etc/cloud/cloud.cfg.d/99-preserve-hostname.cfg
+    owner: root
+    group: root
+    mode: "0644"
+  when: common_cloud_cfg.stat.exists
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+    state: present

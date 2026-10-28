@@ -1,0 +1,62 @@
+---
+# NVIDIA driver + container toolkit for K3s. Runs BEFORE the k3s agent is
+# installed: K3s detects nvidia-container-runtime when it starts.
+# Not yet validated on real GPU hardware.
+- name: Require Ubuntu 24.04
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == 'Ubuntu'
+      - ansible_facts['distribution_version'] == '24.04'
+    fail_msg: gpu_runtime is written for Ubuntu 24.04 only.
+
+# nvidia-headless-<branch>-server depends on the DKMS package, so headers for
+# the RUNNING kernel are required. This fails loudly if none exist.
+- name: Install kernel headers for the running kernel
+  ansible.builtin.apt:
+    name: "linux-headers-{{ ansible_facts['kernel'] }}"
+    state: present
+    update_cache: true
+
+- name: Install NVIDIA server-branch driver and utilities
+  ansible.builtin.apt:
+    name:
+      - "nvidia-headless-{{ nvidia_driver_branch }}-server"
+      - "nvidia-utils-{{ nvidia_driver_branch }}-server"
+    state: present
+  notify: Reboot for NVIDIA driver
+
+- name: Add NVIDIA container toolkit apt repository
+  ansible.builtin.deb822_repository:
+    name: nvidia-container-toolkit
+    types: deb
+    uris: https://nvidia.github.io/libnvidia-container/stable/deb/amd64
+    suites: /
+    architectures: amd64
+    signed_by: https://nvidia.github.io/libnvidia-container/gpgkey
+    state: present
+    enabled: true
+
+- name: Install pinned NVIDIA container toolkit
+  ansible.builtin.apt:
+    name: "nvidia-container-toolkit={{ nvidia_container_toolkit_version }}"
+    state: present
+    update_cache: true
+
+# Reboot (if the driver was just installed) before the GPU check below.
+- name: Apply pending reboot handler
+  ansible.builtin.meta: flush_handlers
+
+- name: Check the driver sees the GPU
+  ansible.builtin.command: nvidia-smi -L
+  register: gpu_runtime_smi
+  changed_when: false
+  failed_when: gpu_runtime_smi.rc != 0 or 'GPU 0' not in gpu_runtime_smi.stdout
+
+- name: Show the GPU
+  ansible.builtin.debug:
+    var: gpu_runtime_smi.stdout_lines
+
+# K3s scans PATH for this binary when it starts.
+- name: Check nvidia-container-runtime is on PATH
+  ansible.builtin.command: which nvidia-container-runtime
+  changed_when: false

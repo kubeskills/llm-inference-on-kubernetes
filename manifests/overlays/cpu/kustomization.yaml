@@ -1,0 +1,15 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - path: deployment-patch.yaml
+configMapGenerator:
+  - name: llm-config
+    behavior: merge
+    literals:
+      # Small model that fits in CPU memory.
+      - MODEL_NAME=qwen2.5:0.5b
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_MAX_LOADED_MODELS=1

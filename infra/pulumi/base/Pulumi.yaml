@@ -1,0 +1,7 @@
+---
+name: llm-inference-infra
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: Hosts for LLM inference on Kubernetes (placeholder)

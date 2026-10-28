@@ -1,0 +1,11 @@
+# Managed by Ansible.
+server: {{ k3s_server_url }}
+token: {{ k3s_agent_token_file.content | b64decode | trim }}
+node-ip: {{ k3s_node_ip }}
+flannel-iface: {{ k3s_flannel_iface }}
+# Explicit so it can never collide with the server node.
+node-name: {{ lab_hostname }}
+{% if inventory_hostname in groups['gpu'] %}
+node-label:
+  - {{ gpu_node_label }}
+{% endif %}

@@ -1,0 +1,28 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: llm-inference
+spec:
+  podSelector:
+    matchLabels:
+      app: llm-inference
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Same-namespace clients only. kubectl port-forward is not affected.
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 11434
+          protocol: TCP
+  egress:
+    # DNS and HTTPS (model pull). Tighten once the model source is fixed.
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+        - port: 443
+          protocol: TCP

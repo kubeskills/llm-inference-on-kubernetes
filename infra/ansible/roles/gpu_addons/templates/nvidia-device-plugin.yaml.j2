@@ -1,0 +1,14 @@
+# Managed by Ansible. Applied by the K3s Helm controller.
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: nvidia-device-plugin
+  namespace: kube-system
+spec:
+  repo: https://nvidia.github.io/k8s-device-plugin
+  chart: nvidia-device-plugin
+  version: {{ nvidia_device_plugin_chart_version }}
+  targetNamespace: nvidia-device-plugin
+  createNamespace: true
+  valuesContent: |-
+    runtimeClassName: nvidia

@@ -1,0 +1,81 @@
+---
+- name: Validate cluster from the server
+  hosts: k3s_server
+  gather_facts: false
+  tasks:
+    - name: Wait for all nodes Ready
+      ansible.builtin.command: >-
+        k3s kubectl wait --for=condition=Ready node --all --timeout=60s
+      register: node_wait
+      retries: 5
+      delay: 15
+      until: node_wait.rc == 0
+      changed_when: false
+
+    - name: List nodes
+      ansible.builtin.command: k3s kubectl get nodes -o name
+      register: node_names
+      changed_when: false
+
+    - name: Assert node count matches inventory
+      ansible.builtin.assert:
+        that:
+          - node_names.stdout_lines | length ==
+            (groups['k3s_server'] | length) + (groups['k3s_agent'] | length)
+
+    - name: Read kubelet versions
+      ansible.builtin.command:
+        argv:
+          - k3s
+          - kubectl
+          - get
+          - nodes
+          - -o
+          - jsonpath={.items[*].status.nodeInfo.kubeletVersion}
+      register: kubelet_versions
+      changed_when: false
+
+    - name: Assert every node runs exactly the pinned K3s version
+      ansible.builtin.assert:
+        that: kubelet_versions.stdout.split() | unique == [k3s_version]
+        fail_msg: >-
+          Node versions {{ kubelet_versions.stdout }} differ from pinned
+          {{ k3s_version }}.
+
+    - name: List StorageClasses
+      ansible.builtin.command: k3s kubectl get storageclass -o name
+      register: storage_classes
+      changed_when: false
+
+    - name: Assert a default-capable StorageClass exists
+      ansible.builtin.assert:
+        that: storage_classes.stdout_lines | length > 0
+
+- name: Validate GPU nodes
+  hosts: gpu
+  gather_facts: false
+  tasks:
+    - name: Query GPU name and driver version
+      ansible.builtin.command: >-
+        nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
+      register: gpu_smi
+      changed_when: false
+
+    - name: Show GPU
+      ansible.builtin.debug:
+        var: gpu_smi.stdout
+
+- name: Validate remote access from the controller
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Check the lab kubeconfig reaches the API through the firewall
+      ansible.builtin.command:
+        argv:
+          - kubectl
+          - --kubeconfig
+          - "{{ lab_kubeconfig }}"
+          - get
+          - nodes
+      changed_when: false

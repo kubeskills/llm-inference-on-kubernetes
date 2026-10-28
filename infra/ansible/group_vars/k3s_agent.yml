@@ -1,0 +1,2 @@
+---
+lab_hostname: "llm-{{ inventory_hostname }}"

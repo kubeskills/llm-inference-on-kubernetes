@@ -1,0 +1,80 @@
+---
+- name: Create K3s config directory
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: "0755"
+
+- name: Write K3s server config
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0600"
+  notify: Restart k3s
+
+- name: Download K3s install script
+  ansible.builtin.get_url:
+    url: "{{ k3s_install_script_url }}"
+    dest: /usr/local/share/k3s-install.sh
+    mode: "0755"
+
+- name: Read installed K3s version
+  ansible.builtin.command: k3s --version
+  register: k3s_server_installed
+  failed_when: false
+  changed_when: false
+
+- name: Install pinned K3s server
+  ansible.builtin.command: /usr/local/share/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+  when: k3s_version not in k3s_server_installed.stdout
+  changed_when: true
+
+- name: Wait for the server node to be Ready
+  ansible.builtin.command: >-
+    k3s kubectl wait --for=condition=Ready node --all --timeout=60s
+  register: k3s_server_ready
+  retries: 5
+  delay: 15
+  until: k3s_server_ready.rc == 0
+  changed_when: false
+
+- name: Read admin kubeconfig
+  ansible.builtin.slurp:
+    src: /etc/rancher/k3s/k3s.yaml
+  register: k3s_server_kubeconfig_file
+  no_log: true
+
+- name: Create controller-side lab directory
+  ansible.builtin.file:
+    path: "{{ lab_dir }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  become: false
+
+- name: Write lab kubeconfig on the controller
+  ansible.builtin.copy:
+    content: "{{ k3s_server_kubeconfig_file.content | b64decode }}"
+    dest: "{{ lab_kubeconfig }}"
+    mode: "0600"
+  delegate_to: localhost
+  become: false
+  no_log: true
+
+- name: Point lab kubeconfig at the server address
+  ansible.builtin.replace:
+    path: "{{ lab_kubeconfig }}"
+    regexp: 'https://127\.0\.0\.1:{{ k3s_api_port }}'
+    replace: "https://{{ ansible_host }}:{{ k3s_api_port }}"
+  delegate_to: localhost
+  become: false
+
+- name: Rename kubeconfig context away from "default"
+  ansible.builtin.replace:
+    path: "{{ lab_kubeconfig }}"
+    regexp: '^(\s*(?:- )?(?:name|cluster|user|current-context)): default$'
+    replace: '\1: {{ lab_context_name }}'
+  delegate_to: localhost
+  become: false

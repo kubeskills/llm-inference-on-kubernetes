@@ -1,0 +1,20 @@
+# Managed by Ansible. Applied by the K3s Helm controller.
+# serviceMonitor is disabled: it needs Prometheus Operator CRDs, which this
+# lab does not install.
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: dcgm-exporter
+  namespace: kube-system
+spec:
+  repo: https://nvidia.github.io/dcgm-exporter/helm-charts
+  chart: dcgm-exporter
+  version: {{ dcgm_exporter_chart_version }}
+  targetNamespace: gpu-monitoring
+  createNamespace: true
+  valuesContent: |-
+    runtimeClassName: nvidia
+    serviceMonitor:
+      enabled: false
+    nodeSelector:
+      nvidia.com/gpu.present: "true"

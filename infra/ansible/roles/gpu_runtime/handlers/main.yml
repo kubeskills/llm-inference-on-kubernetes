@@ -1,0 +1,4 @@
+---
+- name: Reboot for NVIDIA driver
+  ansible.builtin.reboot:
+    reboot_timeout: 900

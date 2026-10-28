@@ -1,0 +1,11 @@
+---
+# Applied only for a GPU session. K3s's built-in Helm controller picks these
+# up from the manifests directory; no helm binary is needed.
+- name: Deploy GPU add-on HelmCharts on the server
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "/var/lib/rancher/k3s/server/manifests/{{ item }}.yaml"
+    mode: "0600"
+  loop:
+    - nvidia-device-plugin
+    - dcgm-exporter

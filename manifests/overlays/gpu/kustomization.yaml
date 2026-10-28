@@ -1,0 +1,18 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Own namespace: the CPU demo (llm-inference) can keep running, and tearing
+# down a GPU session is one namespace delete.
+namespace: llm-inference-gpu
+resources:
+  - ../../base
+patches:
+  - path: deployment-patch.yaml
+configMapGenerator:
+  - name: llm-config
+    behavior: merge
+    literals:
+      # Larger model that benefits from GPU memory.
+      - MODEL_NAME=llama3.2:3b
+      - OLLAMA_NUM_PARALLEL=2
+      - OLLAMA_MAX_LOADED_MODELS=1

@@ -1,0 +1,28 @@
+# Managed by Ansible.
+[Unit]
+Description=Delete expired GPU session instances (expiry enforcement)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/llm-lab/reaper.env
+ExecStart=/opt/llm-lab/scripts/gpu-reaper.sh --execute
+TimeoutStartSec=120
+MemoryMax=128M
+
+# Hardening: the job only needs outbound HTTPS.
+DynamicUser=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+SystemCallFilter=@system-service

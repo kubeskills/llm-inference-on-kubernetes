@@ -1,0 +1,98 @@
+---
+# Installs the independent expiry enforcer on the control-plane server as a
+# systemd timer. The Linode token is a DEDICATED reaper token (separate from
+# the token you use for Pulumi), supplied at run time from the controller's
+# environment and never stored in this repo.
+- name: Require the dedicated reaper token
+  ansible.builtin.assert:
+    that: gpu_reaper_token | length > 0
+    fail_msg: >-
+      Set REAPER_LINODE_TOKEN in the environment (dedicated Linode PAT from the
+      lab account, scope linodes:read_write only).
+  no_log: true
+
+- name: Install curl and jq
+  ansible.builtin.apt:
+    name:
+      - curl
+      - jq
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create script and config directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - path: /opt/llm-lab
+      mode: "0755"
+    - path: /opt/llm-lab/scripts
+      mode: "0755"
+    - path: /etc/llm-lab
+      mode: "0700"
+
+- name: Install the reaper and its helper library
+  ansible.builtin.copy:
+    src: "{{ gpu_reaper_scripts_dir }}/{{ item }}"
+    dest: "/opt/llm-lab/scripts/{{ item }}"
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - lib.sh
+    - gpu-reaper.sh
+
+- name: Write the reaper token (root-only)
+  ansible.builtin.copy:
+    content: "LINODE_TOKEN={{ gpu_reaper_token }}\n"
+    dest: /etc/llm-lab/reaper.env
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Install the systemd service and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - llm-gpu-reaper.service
+    - llm-gpu-reaper.timer
+  notify: Reload systemd
+
+- name: Apply systemd changes
+  ansible.builtin.meta: flush_handlers
+
+# Dry run only (no --execute): proves the token works and the API is
+# reachable without deleting anything.
+- name: Prove the token and API access with a dry run
+  ansible.builtin.shell: |
+    set -o pipefail
+    set -a
+    . /etc/llm-lab/reaper.env
+    set +a
+    exec /opt/llm-lab/scripts/gpu-reaper.sh
+  args:
+    executable: /bin/bash
+  register: gpu_reaper_dry_run
+  changed_when: false
+  failed_when: >-
+    gpu_reaper_dry_run.rc != 0 or
+    'GPU session instance' not in gpu_reaper_dry_run.stdout
+
+- name: Show the dry run
+  ansible.builtin.debug:
+    var: gpu_reaper_dry_run.stdout_lines
+
+- name: Enable and start the timer
+  ansible.builtin.systemd:
+    name: llm-gpu-reaper.timer
+    enabled: true
+    state: started

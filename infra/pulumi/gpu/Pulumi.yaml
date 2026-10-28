@@ -1,0 +1,7 @@
+---
+name: llm-inference-gpu
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: Ephemeral GPU worker session (one stack per session; never base)

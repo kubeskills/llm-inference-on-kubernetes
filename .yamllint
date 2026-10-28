@@ -1,0 +1,11 @@
+---
+extends: default
+ignore: |
+  inventory.yml
+  .ansible/
+  venv/
+  .lab/
+  Pulumi.*.yaml
+rules:
+  line-length:
+    max: 80

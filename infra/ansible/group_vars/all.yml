@@ -1,0 +1,56 @@
+---
+# Kubernetes 1.36 baseline. Exact K3s release, used for every node (server
+# and agents). Verified 2026-10-07: v1.36.5+k3s1 is a non-prerelease GitHub
+# release (2026-09-30) and the K3s "stable" and "v1.36" channels resolve to it.
+# Never use a channel or "latest". Re-verify before changing.
+k3s_version: v1.36.5+k3s1
+k3s_api_port: 6443
+# Nodes talk over the VPC (k3s_node_ip is a per-host inventory var); the
+# public address is only for SSH and the admin kubeconfig.
+k3s_server_public_ip: "{{ hostvars[groups['k3s_server'][0]].ansible_host }}"
+k3s_server_vpc_ip: "{{ hostvars[groups['k3s_server'][0]].k3s_node_ip }}"
+k3s_server_url: "https://{{ k3s_server_vpc_ip }}:{{ k3s_api_port }}"
+k3s_install_script_url: https://get.k3s.io
+k3s_flannel_backend: vxlan
+# Pin flannel to the interface that owns this host's VPC address. Without this
+# K3s binds VXLAN to the public interface even when node-ip is the VPC IP, and
+# the firewall (UDP 8472 from the VPC subnet only) would drop pod traffic.
+k3s_flannel_iface: >-
+  {{ ansible_facts.interfaces | map('extract', ansible_facts)
+  | selectattr('ipv4', 'defined')
+  | selectattr('ipv4.address', 'equalto', k3s_node_ip)
+  | map(attribute='device') | first }}
+k3s_tls_sans:
+  - "{{ k3s_server_public_ip }}"
+  - "{{ k3s_server_vpc_ip }}"
+
+# Controller-side output directory (repo-root .lab, gitignored).
+lab_dir: "{{ (playbook_dir ~ '/../../../.lab') | realpath }}"
+lab_kubeconfig: "{{ lab_dir }}/kubeconfig"
+lab_context_name: llm-lab
+
+# GPU stack (only used when hosts are in the gpu group). Verified published
+# 2026-10-07; none of this has run on real GPU hardware yet.
+# Ubuntu 24.04 driver branch (nvidia-headless/utils-580-server in noble-updates)
+nvidia_driver_branch: "580"
+# Present in the NVIDIA libnvidia-container stable apt repo
+nvidia_container_toolkit_version: 1.20.1-1
+# Helm chart versions in the NVIDIA chart repos
+nvidia_device_plugin_chart_version: 0.20.1
+dcgm_exporter_chart_version: 4.8.4
+# Forces the device plugin DaemonSet onto the GPU node (chart default affinity)
+gpu_node_label: nvidia.com/gpu.present=true
+
+# On-server expiry enforcer. The token is read from the controller's
+# environment at run time and is never committed.
+gpu_reaper_token: "{{ lookup('ansible.builtin.env', 'REAPER_LINODE_TOKEN') }}"
+gpu_reaper_interval_minutes: 5
+gpu_reaper_scripts_dir: "{{ (playbook_dir ~ '/../../../scripts') | realpath }}"
+
+# Host name set by the common role. K3s uses it as the node name, and the VMs
+# otherwise boot as "localhost". Per-group values: group_vars/k3s_server.yml,
+# group_vars/k3s_agent.yml.
+lab_hostname: "{{ inventory_hostname }}"
+# Label shown in the shell prompt: LLM-LAB-SERVER on the server, LLM-GPU-0 on
+# the GPU worker.
+lab_prompt_label: "{{ lab_hostname | upper }}"

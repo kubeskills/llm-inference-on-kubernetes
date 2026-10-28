@@ -1,0 +1,47 @@
+---
+# Joins the ephemeral GPU worker to the existing K3s server. Run with the
+# session inventory (scripts/gpu-session.sh does this). Never touches the
+# server's K3s install; it only adds the GPU add-on manifests to it.
+- name: Pre-flight
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Require an exact Kubernetes 1.36 K3s release (no channels)
+      ansible.builtin.assert:
+        that: k3s_version is match('^v1\\.36\\.[0-9]+\\+k3s[0-9]+$')
+        fail_msg: >-
+          k3s_version must be an exact v1.36.x+k3sN release, got
+          '{{ k3s_version }}'.
+
+- name: Wait for session hosts
+  hosts: k3s_server:gpu
+  gather_facts: false
+  tasks:
+    - name: Wait for SSH to accept connections
+      ansible.builtin.wait_for_connection:
+        delay: 5
+        timeout: 300
+
+- name: Add GPU add-ons to the server
+  hosts: k3s_server
+  roles:
+    - gpu_addons
+
+- name: GPU node base setup
+  hosts: gpu
+  roles:
+    - common
+
+- name: GPU runtime (before the agent starts, so K3s detects it)
+  hosts: gpu
+  roles:
+    - gpu_runtime
+
+- name: Join the GPU worker
+  hosts: gpu
+  roles:
+    - k3s_agent
+
+- name: Validate nodes, versions and GPU
+  ansible.builtin.import_playbook: validate.yml

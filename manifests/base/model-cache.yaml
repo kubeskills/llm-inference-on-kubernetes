@@ -1,0 +1,13 @@
+---
+# Model weights survive pod restarts. Uses the cluster default StorageClass;
+# set storageClassName here if your cluster has none.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-cache
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

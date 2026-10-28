@@ -1,0 +1,18 @@
+---
+# Copy to Pulumi.<stack>.yaml (gitignored), then replace every REPLACE_ME.
+# Region is fixed to us-ord (enforced in __main__.py).
+# The Linode API token is NOT stored here. Export it for the session:
+#   export LINODE_TOKEN=...   (dedicated, scoped, expiring PAT)
+# This project creates NO GPU resources; see ../gpu for the on-demand worker.
+config:
+  llm-inference-infra:region: us-ord
+  # Verified in Linode's public API (2026-10-07): g6-standard-4 = 4 vCPU / 8 GB.
+  llm-inference-infra:serverType: REPLACE_ME
+  # Public IP you will connect from, as a /32. 0.0.0.0/0 is rejected.
+  llm-inference-infra:adminCidr: 203.0.113.4/32
+  llm-inference-infra:sshPublicKey: ssh-ed25519 AAAA... user@host
+  # Optional (defaults shown).
+  llm-inference-infra:labPrefix: llm-lab
+  llm-inference-infra:image: linode/ubuntu24.04
+  llm-inference-infra:vpcSubnetCidr: 10.0.0.0/24
+  llm-inference-infra:serverVpcIp: 10.0.0.10

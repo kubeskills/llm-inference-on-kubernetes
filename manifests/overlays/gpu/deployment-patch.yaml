@@ -1,0 +1,34 @@
+---
+# GPU differences: one NVIDIA GPU, GPU-node scheduling, the nvidia runtime.
+# Sized for a 16 GB / 4 vCPU node (g2-gpu-rtx4000a1-s). Not yet validated on
+# real GPU hardware.
+# Requires: NVIDIA driver + container toolkit on the node, the NVIDIA device
+# plugin (advertises nvidia.com/gpu), and a RuntimeClass named "nvidia".
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-inference
+spec:
+  template:
+    spec:
+      # K3s: required unless --default-runtime was changed on the node.
+      runtimeClassName: nvidia
+      # Set by the Ansible agent config; also what the device plugin chart's
+      # default affinity accepts for forcing GPU scheduling.
+      nodeSelector:
+        nvidia.com/gpu.present: "true"
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: server
+          resources:
+            requests:
+              cpu: "2"
+              memory: 8Gi
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "4"
+              memory: 12Gi
+              nvidia.com/gpu: "1"
