@@ -1,11 +1,12 @@
 # Architecture
 
-This repo has two layers that you can use separately:
+This repo has two layers. It assumes you start from scratch, with no cluster:
 
-1. **The workload** (`manifests/`): a small LLM served by Ollama, deployable on
-   **any Kubernetes cluster** with `kubectl apply -k`. This is the default path.
-2. **An optional lab** (`infra/`): a disposable Linode K3s cluster with an
-   **on-demand GPU worker**, for readers who have no cluster or want a GPU.
+1. **The lab** (`infra/`): a disposable Linode K3s cluster with an **on-demand
+   GPU worker**. This is the default way in.
+2. **The workload** (`manifests/`): a small LLM served by Ollama, deployed with
+   `kubectl apply -k`. It is hardware-agnostic, so if you already have a cluster
+   you can skip the lab and deploy it there.
 
 What has actually run is recorded in [tested-environments.md](tested-environments.md).
 The GPU path passed all 11 validation checks on real hardware on 2026-10-28.

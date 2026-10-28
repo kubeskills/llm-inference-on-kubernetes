@@ -16,8 +16,8 @@ been tested matter more than feature count.
   Other GPUs, regions and clusters are untested.
 - **Docs.** Real failure modes you hit are exactly what
   [docs/troubleshooting.md](docs/troubleshooting.md) needs.
-- **Other clusters and providers**, as long as the default path (an existing
-  cluster, no `infra/`) keeps working.
+- **Other clusters and providers**, as long as both ways in keep working: the
+  from-scratch lab in `infra/` and deploying onto an existing cluster.
 
 For anything larger than a small fix, please open an issue first so we can agree
 on the approach before you spend time on it.

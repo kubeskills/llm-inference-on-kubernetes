@@ -70,6 +70,9 @@ Still not validated, so none of it is claimed:
   after provisioning and was resumed by hand (see below); a clean rerun is needed.
 - **A real reaper deletion** of an expired instance (only the timer, the units and
   a zero-candidate execute run are verified).
+- **The CPU workload on the Linode lab.** The CPU overlay is validated on kind and
+  the lab on Linode (with the GPU workload), but the two have not been run
+  together, even though the README's from-scratch path deploys exactly that.
 - GPUs, regions, plans and clusters other than the one above.
 
 ## GPU lab validation (two nodes, K3s v1.36.5+k3s1): PASSED 2026-10-28

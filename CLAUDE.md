@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-A teaching repo (article + video + code): deploy a small LLM on Kubernetes, either onto **any existing cluster** (the default path; `infra/` is optional) or onto a disposable Linode K3s lab with an on-demand GPU worker. Baseline is Kubernetes 1.36 via K3s. The GPU path passed all 11 checks on one real session (2026-10-28), and teardown (`down` + `verify`) passed on that session, but an unattended `up` and a real reaper deletion have **not** run for real yet; keep docs honest about that (`docs/tested-environments.md` is the record of what has actually run).
+A teaching repo (article + video + code): deploy a small LLM on Kubernetes. The docs **assume the reader starts from scratch**: `infra/` builds a disposable Linode K3s lab with an on-demand GPU worker and is the default way in. Readers who already have a cluster can skip it and deploy `manifests/` there (`KUBE_CONTEXT` mode). Baseline is Kubernetes 1.36 via K3s. The GPU path passed all 11 checks on one real session (2026-10-28), and teardown (`down` + `verify`) passed on that session, but an unattended `up` and a real reaper deletion have **not** run for real yet; keep docs honest about that (`docs/tested-environments.md` is the record of what has actually run).
 
 ## Commands
 

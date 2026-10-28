@@ -1,11 +1,10 @@
-# Infra (optional)
+# Infra: build the lab from scratch
 
-If you already have a working Kubernetes cluster, local or hosted, **skip this
-directory** and go to
-[the main README](../README.md#start-here-i-already-have-a-working-kubernetes-cluster).
-
-This directory builds a disposable K3s lab on Linode in `us-ord` (Kubernetes
-1.36 baseline, K3s `v1.36.5+k3s1` on every node).
+This is where the from-scratch path in the [main README](../README.md#start-here-build-the-lab-from-scratch)
+starts. It builds a disposable K3s lab on Linode in `us-ord` (Kubernetes 1.36
+baseline, K3s `v1.36.5+k3s1` on every node), so you do not need a cluster of your
+own. If you already have one, you can skip this directory; see
+[Already have a cluster?](../README.md#already-have-a-cluster).
 
 ```text
 BASE (persistent)                            GPU SESSION (ephemeral, on demand)
@@ -50,11 +49,13 @@ Pulumi never SSHes to anything. Ansible connects over SSH.
 Billing starts at `pulumi up` (a `g6-standard-4` server is about $0.07/hr).
 
 ```bash
+export LINODE_TOKEN=...
 cd infra/pulumi/base
 python3 -m venv venv && venv/bin/pip install -r requirements.txt
-cp config.example.yaml Pulumi.lab.yaml   # replace every REPLACE_ME
-export LINODE_TOKEN=...
 pulumi stack init lab
+pulumi config set serverType g6-standard-4 --stack lab
+pulumi config set adminCidr <your-public-ip>/32 --stack lab
+pulumi config set sshPublicKey "$(cat ~/.ssh/id_ed25519.pub)" --stack lab
 pulumi preview --stack lab
 pulumi up --stack lab
 
